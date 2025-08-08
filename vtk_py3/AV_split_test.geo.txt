@@ -1,0 +1,141 @@
+//File to be open with gmsh gui to test settings for meshing
+
+Mesh.CharacteristicLengthFactor = 0.4;  // "mesh element size factor" 
+
+Mesh.Algorithm    = 5; 
+Mesh.RecombineAll = 0;
+
+Mesh.Algorithm3D    = 4; 
+Mesh.Recombine3DAll = 0;
+
+Mesh.Optimize = 1;
+Mesh.OptimizeNetgen = 1;
+
+Mesh.Smoothing = 0;
+
+Merge "t0.stl"; //File to be open with gmsh gui to test settings for meshing
+
+endo_atr_id = 0; // "gmsh LA endocardial surface ID"
+endo_ven_id = 1; // "gmsh LV endocardial surface ID"
+epi_atr_id = 2; // "gmsh LA epicardial surface ID"
+epi_ven_id = 3; // "gmsh LV epicardial surface ID"
+avj_id = 4; // "gmsh AV juction surface ID"
+Coherence Mesh;
+
+DefineConstant[
+  // Angle between two triangles above which an edge is considered as sharp
+  angle = {40, Min 20, Max 120, Step 1,
+    Name "Parameters/Angle for surface detection"},
+  // For complex geometries, patches can be too complex, too elongated or too
+  // large to be parametrized; setting the following option will force the
+  // creation of patches that are amenable to reparametrization:
+  forceParametrizablePatches = {0, Choices{0,1},
+    Name "Parameters/Create surfaces guaranteed to be parametrizable"},
+  // For open surfaces include the boundary edges in the classification process:
+  includeBoundary = 1,
+  // Force curves to be split on given angle:
+  curveAngle = 180
+];
+ClassifySurfaces{angle * Pi/180, includeBoundary, forceParametrizablePatches,
+                 curveAngle * Pi / 180};
+CreateGeometry;
+
+CreateTopology;
+
+ss[] = Surface "*";
+endo_atr_bnd() = Abs(Boundary{ Surface {ss[endo_atr_id]}; });
+endo_ven_bnd() = Abs(Boundary{ Surface {ss[endo_ven_id]}; });
+epi_atr_bnd() = Abs(Boundary{ Surface {ss[epi_atr_id]}; });
+epi_ven_bnd() = Abs(Boundary{ Surface {ss[epi_ven_id]}; });
+
+bbox_endo_atr_bnd0() = BoundingBox Curve { endo_atr_bnd(0) };
+bbox_endo_atr_bnd1() = BoundingBox Curve { endo_atr_bnd(1) };
+bbox_endo_ven_bnd0() = BoundingBox Curve { endo_ven_bnd(0) };
+bbox_endo_ven_bnd1() = BoundingBox Curve { endo_ven_bnd(1) };
+If ( Fabs(bbox_endo_atr_bnd0(1)-bbox_endo_ven_bnd0(1))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_endo_atr_bnd0(3)-bbox_endo_ven_bnd0(3))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_endo_atr_bnd0(5)-bbox_endo_ven_bnd0(5))<(0.01*Mesh.CharacteristicLengthFactor))
+  endo_atr_bnd_use = 1;
+  endo_ven_bnd_use = 1;
+ElseIf ( Fabs(bbox_endo_atr_bnd0(1)-bbox_endo_ven_bnd1(1))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_endo_atr_bnd0(3)-bbox_endo_ven_bnd1(3))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_endo_atr_bnd0(5)-bbox_endo_ven_bnd1(5))<(0.01*Mesh.CharacteristicLengthFactor))
+  endo_atr_bnd_use = 1;
+  endo_ven_bnd_use = 0;
+ElseIf ( Fabs(bbox_endo_atr_bnd1(1)-bbox_endo_ven_bnd0(1))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_endo_atr_bnd1(3)-bbox_endo_ven_bnd0(3))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_endo_atr_bnd1(5)-bbox_endo_ven_bnd0(5))<(0.01*Mesh.CharacteristicLengthFactor))
+  endo_atr_bnd_use = 0;
+  endo_ven_bnd_use = 1;
+Else
+  endo_atr_bnd_use = 0;
+  endo_ven_bnd_use = 0;
+EndIf
+
+bbox_epi_atr_bnd0() = BoundingBox Curve { epi_atr_bnd(0) };
+bbox_epi_atr_bnd1() = BoundingBox Curve { epi_atr_bnd(1) };
+bbox_epi_ven_bnd0() = BoundingBox Curve { epi_ven_bnd(0) };
+bbox_epi_ven_bnd1() = BoundingBox Curve { epi_ven_bnd(1) };
+If ( Fabs(bbox_epi_atr_bnd0(1)-bbox_epi_ven_bnd0(1))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_epi_atr_bnd0(3)-bbox_epi_ven_bnd0(3))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_epi_atr_bnd0(5)-bbox_epi_ven_bnd0(5))<(0.01*Mesh.CharacteristicLengthFactor))
+  epi_atr_bnd_use = 1;
+  epi_ven_bnd_use = 1;
+ElseIf ( Fabs(bbox_epi_atr_bnd0(1)-bbox_epi_ven_bnd1(1))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_epi_atr_bnd0(3)-bbox_epi_ven_bnd1(3))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_epi_atr_bnd0(5)-bbox_epi_ven_bnd1(5))<(0.01*Mesh.CharacteristicLengthFactor))
+  epi_atr_bnd_use = 1;
+  epi_ven_bnd_use = 0;
+ElseIf ( Fabs(bbox_epi_atr_bnd1(1)-bbox_epi_ven_bnd0(1))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_epi_atr_bnd1(3)-bbox_epi_ven_bnd0(3))<(0.01*Mesh.CharacteristicLengthFactor) && Fabs(bbox_epi_atr_bnd1(5)-bbox_epi_ven_bnd0(5))<(0.01*Mesh.CharacteristicLengthFactor))
+  epi_atr_bnd_use = 0;
+  epi_ven_bnd_use = 1;
+Else
+  epi_atr_bnd_use = 0;
+  epi_ven_bnd_use = 0;
+EndIf
+
+L_endo_inlet = newll; Curve Loop(L_endo_inlet) = endo_atr_bnd(endo_atr_bnd_use);
+L_epi_inlet = newll; Curve Loop(L_epi_inlet) = epi_atr_bnd(epi_atr_bnd_use);
+L_endo_outlet = newll; Curve Loop(L_endo_outlet) = endo_ven_bnd(endo_ven_bnd_use);
+L_epi_outlet = newll; Curve Loop(L_epi_outlet) = epi_ven_bnd(epi_ven_bnd_use);
+
+
+
+S_inlet = news; Plane Surface(S_inlet) = { L_epi_inlet};
+S_outlet = news; Plane Surface(S_outlet) = { L_epi_outlet};
+
+
+S_inlet_close = news; Plane Surface(S_inlet_close) = { L_endo_inlet };
+S_outlet_close = news; Plane Surface(S_outlet_close) = { L_endo_outlet };
+
+Physical Surface("endoatr") = {ss[endo_atr_id],S_inlet_close};
+Physical Surface("endoven") = {ss[endo_ven_id],S_outlet_close};
+Physical Surface("epiatr") = {ss[epi_atr_id]};
+Physical Surface("epiven") = {ss[epi_ven_id]};
+Physical Surface("avj") = {ss[avj_id]};
+
+Physical Surface("INLET") = {S_inlet };
+Physical Surface("OUTLET") = {S_outlet};
+
+SL_atr_wall = newsl; Surface Loop(SL_atr_wall) = {S_inlet_close,ss[endo_atr_id],ss[avj_id],ss[epi_atr_id],S_inlet };
+SL_ven_wall = newsl; Surface Loop(SL_ven_wall) = {S_outlet_close,ss[endo_ven_id],ss[avj_id],ss[epi_ven_id],S_outlet};
+
+V_atr_wall = newv; Volume(V_atr_wall) = {SL_atr_wall };
+V_ven_wall = newv; Volume(V_ven_wall) = {SL_ven_wall };
+Physical Volume("ATRIAL") = {V_atr_wall };
+Physical Volume("VENTRICLE") = {V_ven_wall };
+
+//BooleanFragments{ Volume{V_wall }; Delete; }{ Surface{ss[epi_atr_id]}; Delete; }
+
+avj_bnd() = Abs(Boundary{ Surface {ss[avj_id]}; });
+bbox_avj_bnd0() = BoundingBox Curve { avj_bnd(0) };
+bbox_avj_bnd1() = BoundingBox Curve { avj_bnd(1) };
+avj_bnd_use = 0;
+If ( bbox_avj_bnd1(3) < bbox_avj_bnd0(3))
+  avj_bnd_use = 1;
+EndIf
+
+Field[1] = Distance;
+Field[1].CurvesList = {avj_bnd(avj_bnd_use)};
+
+Field[2] = Threshold;
+Field[2].InField = 1;
+Field[2].SizeMin = Mesh.CharacteristicLengthFactor * 40.0; // "gmsh AV juction refinement min size factor" 
+Field[2].SizeMax = Mesh.CharacteristicLengthFactor * 200.0; // "gmsh AV juction refinement max size factor" 
+Field[2].DistMin = Mesh.CharacteristicLengthFactor * 10.0; // "gmsh AV juction refinement min distance factor" 
+Field[2].DistMax = Mesh.CharacteristicLengthFactor * 30.0; // "gmsh AV juction refinement max distance factor" 
+Background Field = 2;
+
+Mesh.MeshSizeExtendFromBoundary = 0;
+Mesh.MeshSizeFromPoints = 0;
+Mesh.MeshSizeFromCurvature = 0;
